@@ -1,152 +1,188 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px  # For interactive plots
+import plotly.express as px
 
 # --- Settings ---
-st.set_page_config(page_title="Sri Lanka Industrial Data", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Sri Lanka Industrial Data", layout="wide")
 
 # --- Load Data ---
-@st.cache_data  # Cache data for performance
+@st.cache_data
 def load_data(file_path):
-    df = pd.read_csv(file_path)
-    return df
+    return pd.read_csv(file_path)
 
-DATA_URL = 'UNdata_Export_20250422_215048149.csv'  # Replace with your data file path
+DATA_URL = 'processed_industry_data.csv'
 df = load_data(DATA_URL)
 
-# --- Data Exploration ---
-if st.sidebar.checkbox("Show Raw Data", value=False):
-    st.subheader("Raw Data")
-    st.dataframe(df)
+# --- Navigation ---
+page = st.sidebar.radio("Navigate", ["Introduction", "Dashboard"])
 
-if st.sidebar.checkbox("Show Data Summary", value=False):
-    st.subheader("Data Summary")
-    st.write(df.describe())
+# --- Page: Introduction ---
+if page == "Introduction":
+    st.title("Welcome to the Sri Lanka Industrial Data Explorer")
+    st.markdown("""
+        This dashboard provides insights into Sri Lanka's industrial employment trends over time.
 
-# --- Sidebar Filters ---
-st.sidebar.header("Filters")
+        ### Features:
+        -  Time series analysis of employee growth
+        -  Industry-level breakdowns and comparisons
+        -  Employee distribution by category
+        -  Filtering and data downloads
 
-# Year Filter
-unique_years = sorted(df['Year'].unique())
-year_filter = st.sidebar.selectbox("Select Year", unique_years, index=len(unique_years) - 1)  # Default to latest year
-df_filtered_year = df[df['Year'] == year_filter]
+        Use the sidebar to explore filters or switch to the **Dashboard** page to begin analyzing data.
+    """)
 
-# ISIC Rev 3 Filter
-unique_industries = sorted(df['ISIC Rev 3'].unique())
-industry_filter = st.sidebar.selectbox("Select Industry", unique_industries, index=0)  # Default to first industry
-df_filtered_industry = df[df['ISIC Rev 3'] == industry_filter]
+# --- Page: Dashboard ---
+elif page == "Dashboard":
+    st.title("Sri Lanka Industrial Data Dashboard")
 
-# Industry Comparison Filter
-selected_industries = st.sidebar.multiselect("Compare Industries", unique_industries, default=unique_industries[:5])
-df_filtered_industries = df[df['ISIC Rev 3'].isin(selected_industries)]
+    # --- Optional Data Exploration ---
+    if st.sidebar.checkbox("Show Raw Data", value=False):
+        st.subheader("Raw Data")
+        st.dataframe(df)
 
-# --- Main Content ---
-st.title("Sri Lanka Industrial Data Dashboard")
+    if st.sidebar.checkbox("Show Data Summary", value=False):
+        st.subheader("Data Summary")
+        st.write(df.describe())
 
-# --- KPIs ---
-st.header("Key Performance Indicators")
-col1, col2, col3 = st.columns(3)
+    # --- Sidebar Filters ---
+    st.sidebar.header("Filters")
 
-with col1:
-    total_value = df['Value'].sum()
-    st.metric("Total Value of employees", f"{total_value:,.2f}")
+    unique_years = sorted(df['Year'].unique())
+    year_filter = st.sidebar.selectbox("Select Year", unique_years, index=len(unique_years) - 1)
+    df_filtered_year = df[df['Year'] == year_filter]
 
-with col2:
-    avg_value = df['Value'].mean()
-    st.metric("Average Value of employees", f"{avg_value:,.2f}")
+    unique_industries = sorted(df['ISIC Rev 3'].unique())
+    industry_filter = st.sidebar.selectbox("Select Industry", unique_industries)
+    df_filtered_industry = df[df['ISIC Rev 3'] == industry_filter]
 
-with col3:
-    latest_year_value = df[df['Year'] == df['Year'].max()]['Value'].sum()
-    st.metric(f"Total Value of employees ({df['Year'].max()})", f"{latest_year_value:,.2f}")
+    selected_industries = st.sidebar.multiselect("Compare Industries", unique_industries, default=unique_industries[:5])
+    df_filtered_industries = df[df['ISIC Rev 3'].isin(selected_industries)]
 
-# --- Visualizations ---
-st.header("Visualizations")
+    # --- KPIs ---
+    st.header("Key Performance Indicators")
+    col1, col2, col3 = st.columns(3)
 
-# --- Layout with Tabs ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-    ["Time Series", "Industry Comparison", "Value Distribution", "Filtered Data", "Scatter Plot", "Area Chart"])  # Added two tabs
+    with col1:
+        total_value = df['Number of Employees'].sum()
+        st.metric("Total Employees", f"{total_value:,.2f}")
 
-with tab1:
-    st.subheader("Total Value of Employees Over Time")
-    try:
-        # Group data by year and sum the 'Value'
-        yearly_value = df.groupby('Year')['Value'].sum().reset_index()
+    with col2:
+        avg_value = df['Number of Employees'].mean()
+        st.metric("Average Employees per Record", f"{avg_value:,.2f}")
 
-        fig_line = px.line(yearly_value, x='Year', y='Value',
-                          title="Total Industrial Value of employees Over Time",
-                          labels={'Year': 'Year', 'Value': 'Total Value'},
-                          markers=True)  # Added markers for better readability
-        st.plotly_chart(fig_line, use_container_width=True)
-    except KeyError:
-        st.error("Make sure your data has 'Year' and 'Value' columns.")
+    with col3:
+        latest_year_value = df[df['Year'] == df['Year'].max()]['Number of Employees'].sum()
+        st.metric(f"Total Employees in {df['Year'].max()}", f"{latest_year_value:,.2f}")
 
-with tab2:
-    st.subheader("Value by Industry (Bar Chart)")
-    try:
-        # Group data by Industry and sum the 'Value'
-        industry_value = df.groupby('ISIC Rev 3')['Value'].sum().reset_index()
+    # --- Visualizations ---
+    st.header("Visualizations")
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "Time Series", "Industry Comparison", "Distribution",
+        "Filtered Data", "Area Chart", "Category Summary", "Bubble Chart"
+    ])
 
-        fig_bar = px.bar(industry_value, x='ISIC Rev 3', y='Value',
-                          title="Total Value of employees Added by Industry",
-                          labels={'ISIC Rev 3': 'Industry', 'Value': 'Total Value'})
-        fig_bar.update_layout(xaxis_tickangle=-45)  # Rotate x-axis labels
-        st.plotly_chart(fig_bar, use_container_width=True)
-    except KeyError:
-        st.error("Make sure your data has 'ISIC Rev 3' and 'Value' columns.")
+    def create_year_plot(fig, x_axis_label="Year", y_axis_label="Number of Employees"):
+        fig.update_layout(
+            xaxis=dict(
+                tickmode='array',
+                tickvals=sorted(df['Year'].unique()),
+                ticktext=[str(year) for year in sorted(df['Year'].unique())],
+                title=x_axis_label
+            ),
+            yaxis_title=y_axis_label
+        )
+        return fig
 
-    st.subheader("Industry Comparison (Multi-Select)")
-    try:
-        fig_bar_compare = px.bar(df_filtered_industries, x='ISIC Rev 3', y='Value',
-                                  title="Value Comparison for Selected Industries",
-                                  labels={'ISIC Rev 3': 'Industry', 'Value': 'Total Value'})
-        fig_bar_compare.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig_bar_compare, use_container_width=True)
-    except KeyError:
-        st.error("Select industries to compare.")
+    # --- Tab 1: Time Series ---
+    with tab1:
+        st.subheader("Total Employees Over Time")
+        try:
+            yearly_value = df.groupby('Year')['Number of Employees'].sum().reset_index()
+            fig_line = px.line(yearly_value, x='Year', y='Number of Employees', title="Total Industrial Employees Over Time", markers=True)
+            st.plotly_chart(create_year_plot(fig_line), use_container_width=True)
+        except KeyError:
+            st.error("Missing 'Year' or 'Number of Employees' column.")
 
-with tab3:
-    st.subheader("Employee Distribution by Industry (Pie Chart)")
-    try:
-        industry_value_pie = df.groupby('ISIC Rev 3')['Value'].sum().reset_index()
-        fig_pie = px.pie(industry_value_pie, values='Value', names='ISIC Rev 3', title="Value Distribution by Industry")
-        st.plotly_chart(fig_pie, use_container_width=True)
-    except KeyError:
-        st.error("Make sure your data has 'ISIC Rev 3' and 'Value' columns.")
+    # --- Tab 2: Industry Comparison ---
+    with tab2:
+        st.subheader("Total Employees by Industry")
+        try:
+            industry_value = df.groupby('ISIC Rev 3')['Number of Employees'].sum().reset_index()
+            fig_bar = px.bar(industry_value, x='ISIC Rev 3', y='Number of Employees', title="Total Employees by Industry")
+            fig_bar.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig_bar, use_container_width=True)
+        except KeyError:
+            st.error("Missing necessary columns.")
 
-with tab4:
-    st.subheader(f"Data for Year: {year_filter}")
-    st.dataframe(df_filtered_year)
+        st.subheader("Selected Industry Comparison")
+        try:
+            fig_bar_compare = px.bar(df_filtered_industries, x='ISIC Rev 3', y='Number of Employees', title="Selected Industry Employee Totals")
+            fig_bar_compare.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig_bar_compare, use_container_width=True)
+        except KeyError:
+            st.error("Please select valid industries.")
 
-    st.subheader(f"Data for Industry: {industry_filter}")
-    st.dataframe(df_filtered_industry)
+    # --- Tab 3: Pie Chart Distribution ---
+    with tab3:
+        st.subheader("Employee Distribution by Industry Category")
+        selected_types_pie = st.multiselect("Select Industry Category for Pie Chart", df['Industry_Category'].unique(), default=df['Industry_Category'].unique())
+        try:
+            type_value_pie = df[df['Industry_Category'].isin(selected_types_pie)].groupby('Industry_Category')['Number of Employees'].sum().reset_index()
+            fig_pie = px.pie(type_value_pie, values='Number of Employees', names='Industry_Category', title="Employee Distribution by Industry Category")
+            st.plotly_chart(fig_pie, use_container_width=True)
+        except KeyError:
+            st.error("Ensure the 'Industry_Category' and 'Number of Employees' columns exist.")
 
-with tab5:  # Scatter Plot
-    st.subheader("Scatter Plot of Value vs. Year")
-    try:
-        fig_scatter = px.scatter(df, x='Year', y='Value',
-                                  title="Value vs. Year",
-                                  labels={'Year': 'Year', 'Value': 'Value'})
-        st.plotly_chart(fig_scatter, use_container_width=True)
-    except KeyError:
-        st.error("Make sure your data has 'Year' and 'Value' columns.")
+    # --- Tab 4: Filtered Data ---
+    with tab4:
+        st.subheader(f"Data for Year: {year_filter}")
+        st.dataframe(df_filtered_year)
 
-with tab6:  # Area Chart
-    st.subheader("Cumulative Value Over Time")
-    try:
-        # Group by year and calculate cumulative value
-        cumulative_value = df.groupby('Year')['Value'].sum().cumsum().reset_index()
-        fig_area = px.area(cumulative_value, x='Year', y='Value',
-                            title="Cumulative Value Over Time",
-                            labels={'Year': 'Year', 'Value': 'Cumulative Value'})
-        st.plotly_chart(fig_area, use_container_width=True)
-    except KeyError:
-        st.error("Make sure your data has 'Year' and 'Value' columns.")
+        st.subheader(f"Data for Industry: {industry_filter}")
+        st.dataframe(df_filtered_industry)
 
-# --- Further Enhancements ---
-# Add more visualizations as needed (e.g., scatter plots, area charts)
-# Implement more advanced filtering (e.g., filtering by value ranges)
-# Add a download button for the filtered data
-# Improve the styling with CSS or Streamlit's theming options
-# Add error handling and user feedback
+        csv = df_filtered_year.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Filtered Year Data", data=csv, file_name="filtered_year_data.csv", mime='text/csv')
+
+    # --- Tab 5: Area Chart ---
+    with tab5:
+        st.subheader("Cumulative Employees Over Time")
+        try:
+            cumulative_value = df.groupby('Year')['Number of Employees'].sum().cumsum().reset_index()
+            fig_area = px.area(cumulative_value, x='Year', y='Number of Employees', title="Cumulative Total of Employees")
+            st.plotly_chart(create_year_plot(fig_area), use_container_width=True)
+        except KeyError:
+            st.error("Check column names.")
+
+    # --- Tab 6: Industry Category Summary ---
+    with tab6:
+        st.subheader("Employee Totals by Industry Category")
+        try:
+            category_value = df.groupby('Industry_Category')['Number of Employees'].sum().reset_index()
+            fig_category = px.bar(category_value, x='Industry_Category', y='Number of Employees', title="Employees by Industry Category")
+            fig_category.update_layout(xaxis_tickangle=-30)
+            st.plotly_chart(fig_category, use_container_width=True)
+        except KeyError:
+            st.error("Missing 'Industry_Category' or 'Number of Employees'.")
+
+    # --- Tab 7: Bubble Chart ---
+    with tab7:
+        st.subheader("Industry Bubble Chart")
+        bubble_size_column = "Number of Employees"
+
+        try:
+            df_bubble = df.copy()
+            fig_bubble = px.scatter(
+                df_bubble,
+                x="Year",
+                y="Number of Employees",
+                size=bubble_size_column,
+                color="Industry_Category",
+                hover_name="ISIC Rev 3",
+                title="Industry Overview Bubble Chart",
+                size_max=60
+            )
+            fig_bubble = create_year_plot(fig_bubble)
+            st.plotly_chart(fig_bubble, use_container_width=True)
+        except KeyError as e:
+            st.error(f"Missing column: {e}")
