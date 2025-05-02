@@ -18,18 +18,37 @@ page = st.sidebar.radio("Navigate", ["Introduction", "Dashboard"])
 
 # --- Page: Introduction ---
 if page == "Introduction":
-    st.title("Welcome to the Sri Lanka Industrial Data Explorer")
-    st.markdown("""
-        This dashboard provides insights into Sri Lanka's industrial employment trends over time.
-
-        ### Features:
-        -  Time series analysis of employee growth
-        -  Industry-level breakdowns and comparisons
-        -  Employee distribution by category
-        -  Filtering and data downloads
-
-        Use the sidebar to explore filters or switch to the **Dashboard** page to begin analyzing data.
-    """)
+    # Background image using HTML/CSS with transparency
+    st.markdown(
+        """
+        <style>
+        .intro-bg {
+            background-image: url('https://i.pinimg.com/736x/80/72/7a/80727a88eed6332612b325b6ef8b437c.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            padding: 5rem;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+        </style>
+        <div class="intro-bg">
+        <h1 style="color: #C9DFFF;">Welcome to the Sri Lanka Industrial Employement Data Explorer</h1>
+        <p style="font-size: 18px; color: #ADD9E0;">
+            This dashboard provides insights into Sri Lanka's industrial employment trends over time.
+        </p>
+        <h3>Features:</h3>
+        <ul>
+            <li>Time series analysis of employee growth</li>
+            <li>Industry-level breakdowns and comparisons</li>
+            <li>Employee distribution by category</li>
+            <li>Filtering and data downloads</li>
+            <li>Bubble chart insights of employee data</li>
+        </ul>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # --- Page: Dashboard ---
 elif page == "Dashboard":
